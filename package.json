@@ -2,15 +2,15 @@
   "name": "webrtc",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:8080",
   "dependencies": {
+    "path": "^0.12.7",
     "react": "^16.10.2",
     "react-dom": "^16.10.2",
     "react-scripts": "3.2.0",
     "socket.io-client": "^2.3.0"
   },
   "scripts": {
-    "start": "PORT=9000 react-scripts start",
+    "start": "node server.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
