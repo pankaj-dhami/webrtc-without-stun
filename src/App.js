@@ -65,7 +65,7 @@ class App extends Component {
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
     // see the above link for more constraint options
     const constraints = {
-      audio: false,
+      audio: true,
       video: true,
       // video: {
       //   width: 1280,

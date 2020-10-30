@@ -1,60 +1,49 @@
-const express = require('express')
-const app = express()
-const port = 80
+require('dotenv').config();
+const express = require("express");
+const http = require("http");
+const app = express();
+const server = http.createServer(app);
+const socket = require("socket.io");
+const io = socket(server);
+const path = require('path');
 
-var io = require('socket.io')
-({
-  path: '/webrtc'
-})
+const rooms = {};
 
-// keep a reference of all socket connections
-let connectedPeers = new Map()
+io.on("connection", socket => {
+    socket.on("join room", roomID => {
+        if (rooms[roomID]) {
+            rooms[roomID].push(socket.id);
+        } else {
+            rooms[roomID] = [socket.id];
+        }
+        const otherUser = rooms[roomID].find(id => id !== socket.id);
+        if (otherUser) {
+            socket.emit("other user", otherUser);
+            socket.to(otherUser).emit("user joined", socket.id);
+        }
+    });
 
-//https://expressjs.com/en/guide/writing-middleware.html
-app.use(express.static(__dirname + '/build'))
-app.get('/', (req, res, next) => {
-    res.sendFile(__dirname + '/build/index.html')
-})
+    socket.on("offer", payload => {
+        io.to(payload.target).emit("offer", payload);
+    });
 
-app.get('/', (req, res) => res.send('Hello World!!!!!'))
+    socket.on("answer", payload => {
+        io.to(payload.target).emit("answer", payload);
+    });
 
-const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+    socket.on("ice-candidate", incoming => {
+        io.to(incoming.target).emit("ice-candidate", incoming.candidate);
+    });
+});
 
-io.listen(server)
 
-const peers = io.of('/webrtcPeer')
+    app.use(express.static(path.join(__dirname, './build')));
+    app.get('*', (req, res)=>{
+        res.sendFile(path.join(__dirname, './build/index.html'));
 
-peers.on('connection', socket => {
+    });
 
-  console.log(socket.id)
-  socket.emit('connection-success', { success: socket.id })
 
-  connectedPeers.set(socket.id, socket)
 
-  socket.on('disconnect', () => {
-    console.log('disconnected')
-    connectedPeers.delete(socket.id)
-  })
-
-  socket.on('offerOrAnswer', (data) => {
-    // send to the other peer(s) if any
-    for (const [socketID, socket] of connectedPeers.entries()) {
-      // don't send to self
-      if (socketID !== data.socketID) {
-        console.log(socketID, data.payload.type)
-        socket.emit('offerOrAnswer', data.payload)
-      }
-    }
-  })
-
-  socket.on('candidate', (data) => {
-    // send candidate to the other peer(s) if any
-    for (const [socketID, socket] of connectedPeers.entries()) {
-      // don't send to self
-      if (socketID !== data.socketID) {
-        console.log(socketID, data.payload)
-        socket.emit('candidate', data.payload)
-      }
-    }
-  })
-})
+const port = process.env.PORT || 80;
+server.listen(port, () => console.log(`server is running on port ${port}`));
